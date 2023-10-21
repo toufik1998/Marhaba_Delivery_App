@@ -88,6 +88,63 @@ const activeTrue = (req, res) => {
       });
 };
 
+const userLogin = async (req, res) => {
+    const { email, password } = req.body;
+  
+    try {
+      if (email && password) {
+        const user = await UserModel.findOne({ email: email }).populate(
+          "role",
+          "name"
+        );
+        if (user != null) {
+          const isMatch = await bcrypt.compare(password, user.password);
+          if (isMatch && email == user.email && user.active == true) {
+            // generate token
+            const token = jwt.sign(
+              { userID: user._id, name: user.name, role: user.role.name },
+              process.env.JWT_SECRET_KEY,
+              { expiresIn: "5d" }
+            );
+  
+            res.cookie("authToken", token, { httpOnly: true });
+  
+            switch (user.role.name) {
+              case "manager":
+                return res.redirect("/api/user/manager/me");
+              case "delivery":
+                return res.redirect("/api/user/delivery/me");
+              case "client":
+                return res.redirect("/api/user/client/me");
+            }
+  
+            res.status(200).send({
+              status: "success",
+              message: "Login success",
+              token: token,
+            });
+          } else {
+            res.status(401).send({
+              status: "failed",
+              message: "Email or password not valid or you don't activate your account",
+            });
+          }
+        } else {
+          res
+            .status(404)
+            .send({ status: "failed", message: "This account doesn't exist" });
+        }
+      } else {
+        res
+          .status(400)
+          .send({ status: "failed", message: "All fields are required" });
+      }
+    } catch (error) {
+      res.status(401).send({ status: "failed", message: "Unable to login" });
+      console.log(error);
+    }
+  };
 
-module.exports = {userRegistration, activeTrue}
+
+module.exports = {userRegistration, activeTrue, userLogin}
 
