@@ -143,8 +143,40 @@ const userLogin = async (req, res) => {
       res.status(401).send({ status: "failed", message: "Unable to login" });
       console.log(error);
     }
-  };
+};
+
+const changePassword = async (req, res) => {
+    const { password, password_confirmation } = req.body;
+    if (password && password_confirmation) {
+      if (password !== password_confirmation) {
+        res.status(400).send({
+          status: "failed",
+          message: "New password and confirm password doesn't match",
+        });
+      } else {
+        const salt = await bcrypt.genSalt(10);
+        const newHashPassword = await bcrypt.hash(password, salt);
+        // await UserModel.findByIdAndUpdate(req.user._id, {$set: {password: newHashPassword}});
+        await UserModel.findByIdAndUpdate(req.user._id, {
+          $set: { password: newHashPassword },
+        });
+  
+        res.status(200).send({
+          status: "success",
+          message: "New password changed succefully",
+        });
+      }
+    } else {
+      res
+        .status(400)
+        .send({ status: "failed", message: "All field are required" });
+    }
+};
+
+const loggedUser = (req, res) => {
+    res.send({ User: req.user });
+};
 
 
-module.exports = {userRegistration, activeTrue, userLogin}
+module.exports = {userRegistration, activeTrue, userLogin, changePassword, loggedUser}
 
